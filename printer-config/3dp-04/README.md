@@ -28,6 +28,13 @@ based on the current upstream Tap profile; merge any existing custom actions
 from the live printer before installing it. Keep the existing `[skew_correction]`
 section and saved profile. No calibration data is supplied or changed here.
 
+Live inspection on 2026-09-03 confirmed that 3dp-04 already uses the listed
+`purge_blob`, `qgl_fine` and `load_skew` actions, includes `reset_limits`, and has
+the requested parking values. Its existing `qgl_fine.cfg` already has the same
+coarse pass followed by a deferred, state-checked fine pass. The deployment diff
+therefore adds the three early hook variables/macros and the updater override;
+it preserves those existing definitions rather than replacing them.
+
 `QGL_FINE` calls the existing Klippain QGL wrapper twice. The coarse call uses
 `HORIZONTAL_MOVE_Z=30 SAMPLES=1 RETRIES=0`; the fine call changes only
 `HORIZONTAL_MOVE_Z=3`. Sampling, sample tolerance, sample retries, QGL tolerance
@@ -46,8 +53,9 @@ Parking uses a 50mm lift and XY 150,10.
 
 - Keep fork `main` as an unmodified upstream mirror. It was 95 commits behind,
   with no unique commits, at inspection time.
-- Keep the generic hook and CI commits on `codex/pre-motion-hooks`, suitable for
-  upstream review. Rebase unpublished review work onto new upstream revisions;
+- Keep the generic hook commit on `codex/pre-motion-hooks`, suitable for upstream
+  review. The fork-only workflow lives on `codex/validated-hooks`. Rebase
+  unpublished review work onto new upstream revisions;
   avoid rewriting any branch used by a printer.
 - Use `codex/3dp-04` for integration candidates. Merge upstream updates into a
   new candidate branch, resolve conflicts, review release/config changes, run
@@ -105,5 +113,9 @@ After confirming the exact diff, idle printer state and rollback backup:
 7. Supervise START, two-pass QGL, END and CANCEL, including parking near maximum
    Z, before relying on this for unattended prints.
 
-The printer has not been contacted or changed by this work. Host access and its
-current configuration are still needed to turn these steps into an exact diff.
+The printer was inspected read-only; no files, services, or Git refs were changed.
+Before deployment, preserve these five untracked files in `~/klippain_config`:
+the local Mellow SB2040 Pro v3 board definition and its swap file,
+`macros/base/park.cfg.orig`, plus local Moonraker timelapse and Voron-extension
+snippets. Moonraker reported the tracked checkout pristine at `ac565f2`, one
+upstream commit behind, with Klipper and Moonraker active.

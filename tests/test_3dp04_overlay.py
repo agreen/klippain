@@ -34,12 +34,13 @@ class PrinterOverlayTest(unittest.TestCase):
         actions = value("startprint_actions")
         self.assertNotIn("tilt_calib", actions)
         self.assertIn("qgl_fine", actions)
+        self.assertIn("purge_blob", actions)
         self.assertGreater(actions.index("load_skew"), actions.index("purge"))
         self.assertGreater(actions.index("load_skew"), actions.index("clean"))
         self.assertGreater(actions.index("load_skew"), actions.index("primeline"))
         self.assertIn("SKEW_PROFILE LOAD=calilantern_skew_profile", macro("_START_PRINT_ACTION_LOAD_SKEW"))
 
-        qgl = [line.strip() for line in macro("QGL_FINE").splitlines()
+        qgl = [line.strip() for line in (macro("QGL_FINE") + macro("_QGL_FINE_FINISH")).splitlines()
                if line.strip().startswith("QUAD_GANTRY_LEVEL")]
         self.assertEqual(qgl, [
             "QUAD_GANTRY_LEVEL HORIZONTAL_MOVE_Z=30 SAMPLES=1 RETRIES=0",

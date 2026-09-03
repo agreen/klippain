@@ -39,10 +39,12 @@ it preserves those existing definitions rather than replacing them.
 directory; include it once at the end of `overrides.cfg`.
 
 `thermal-management.cfg` is the exact thermal policy intended to be installed as
-`~/printer_data/config/klippain-thermal-management.cfg`. Replace the existing
-`[include electronics_enclosure_fan.cfg]` line in `printer.cfg` with an include
-of that file; do not include both because they drive the same controller-fan pin.
-The old file should remain in the rollback backup.
+`~/printer_data/config/klippain-thermal-management.cfg`. Comment out the existing
+`[include electronics_enclosure_fan.cfg]` line in `printer.cfg`, then include the
+new file at the very end of `overrides.cfg`. Do not include both because they
+drive the same controller-fan pin. Including the new file last also ensures its
+RPi speed cap replaces the older `max_speed: 1.0` override. The old file should
+remain in the rollback backup.
 
 The smart soak uses the installed Voron Klipper Extensions `temp_tracker` over
 the prior ten minutes of chamber readings. PLA, PETG and TPU always wait only for

@@ -60,9 +60,9 @@ gcode:
   # Put your custom prime line G-code here...
 ```
 
-## Custom START_PRINT and END_PRINT actions
+## Custom START_PRINT, END_PRINT and CANCEL_PRINT actions
 
-`START_PRINT` and `END_PRINT` are built from ordered action lists in `_USER_VARIABLES`.
+`START_PRINT`, `END_PRINT` and `CANCEL_PRINT` are built from ordered action lists in `_USER_VARIABLES`.
 Override these lists in `overrides.cfg` to reorder actions, remove actions,
 duplicate actions, or insert your own custom actions.
 
@@ -71,21 +71,28 @@ Built-in `START_PRINT` actions are `bed_soak`, `extruder_preheating`,
 `contact_z_home`, `contact_auto_calibrate`, `beacon_calib`, `bedmesh`, `purge`,
 `clean`, and `primeline`.
 
-Built-in `END_PRINT` actions are `retract_filament`, `turn_off_heaters`,
-`turn_off_fans`, `turn_off_motors`, and `reset_limits`.
+Built-in `END_PRINT` actions are `park`, `wait_moves`, `clear_bed_mesh`,
+`retract_filament`, `turn_off_heaters`, `turn_off_fans`, `turn_off_motors`,
+`reset_limits`, and `finalize`.
+
+Built-in `CANCEL_PRINT` actions are `park`, `retract_filament`,
+`turn_off_heaters`, `turn_off_fans`, `wait_moves`, `clear_pause`,
+`clear_bed_mesh`, `reset_sdcard`, `finalize`, and `base_cancel`.
 
 Example:
 ```
 [gcode_macro _USER_VARIABLES]
 variable_startprint_actions: "bed_soak", "extruder_preheating", "my_start_action", "bedmesh", "primeline"
-variable_endprint_actions: "retract_filament", "my_end_action", "turn_off_heaters", "turn_off_fans"
+variable_endprint_actions: "my_end_action", "park", "wait_moves", "clear_bed_mesh", "retract_filament", "turn_off_heaters", "turn_off_fans", "turn_off_motors", "reset_limits", "finalize"
+variable_cancelprint_actions: "my_cancel_action", "park", "retract_filament", "turn_off_heaters", "turn_off_fans", "wait_moves", "clear_pause", "clear_bed_mesh", "reset_sdcard", "finalize", "base_cancel"
 gcode:
 ```
 
 The preferred way to add a custom action is to add its name to the list and define
 its matching macro in `overrides.cfg`. Use lowercase letters, numbers, and
 underscores for custom action names. Klippain uppercases the action name and calls
-`_START_PRINT_ACTION_<NAME>` or `_END_PRINT_ACTION_<NAME>`.
+`_START_PRINT_ACTION_<NAME>`, `_END_PRINT_ACTION_<NAME>` or
+`_CANCEL_PRINT_ACTION_<NAME>`.
 
 For a custom `START_PRINT` action named `my_start_action`:
 ```
@@ -101,7 +108,14 @@ gcode:
   # Put your custom END_PRINT G-code here...
 ```
 
-Custom action macros receive the original `START_PRINT` or `END_PRINT` parameters,
+For a custom `CANCEL_PRINT` action named `my_cancel_action`:
+```
+[gcode_macro _CANCEL_PRINT_ACTION_MY_CANCEL_ACTION]
+gcode:
+  # Put your custom CANCEL_PRINT G-code here...
+```
+
+Custom action macros receive the original parent macro parameters,
 so values such as `BED_TEMP`, `EXTRUDER_TEMP`, `MATERIAL`, or `FILTER_TIME` are
 available through `params` when they were passed to the parent macro.
 
@@ -115,17 +129,11 @@ so on. These slots only exist for `START_PRINT`. For new custom actions, prefer 
 named `_START_PRINT_ACTION_<NAME>` pattern because it is clearer and does not limit
 you to nine custom actions.
 
-### Actions before motion and parking
+### Actions before START_PRINT motion
 
 The main `START_PRINT` action list begins after homing. For actions that must happen
 before homing or any other START_PRINT motion, set `variable_startprint_pre_actions`
 and define matching `_START_PRINT_PRE_ACTION_<NAME>` macros.
-
-`END_PRINT` and `CANCEL_PRINT` also provide action lists immediately before `PARK`:
-`variable_endprint_pre_park_actions` and `variable_cancelprint_pre_park_actions`.
-Their matching macro names are `_END_PRINT_PRE_PARK_ACTION_<NAME>` and
-`_CANCEL_PRINT_PRE_PARK_ACTION_<NAME>`. All three lists are empty by default, and
-the original macro parameters are forwarded to custom actions.
 
 For example, define an early setup action in `overrides.cfg`:
 ```ini
@@ -139,9 +147,9 @@ gcode:
 ```
 
 Use a list (`["prepare"]`) or tuple (`"prepare",`) for a single action, and `()`
-to disable a hook list. Entries are custom action names, not the built-in actions
-from the main START/END lists. Actions execute in order and may be repeated.
-An unknown action raises an error before any commands in the parent macro run.
+to disable the pre-start list. Entries are custom action names. Actions execute
+in order and may be repeated. An unknown action raises an error before any
+commands in the parent macro run.
 
 Pre-start actions run after parameter/material validation and before setup,
 homing, or MMU initialization. Parameters saved on `START_PRINT` are available
@@ -149,8 +157,8 @@ when the action macro executes. As with other Klipper macros, the parent templat
 is evaluated before its commands run; actions cannot change already evaluated
 conditions in that parent invocation.
 
-Cancel pre-park actions also run when axes are unhomed; cancellation still skips
-`PARK` in that case. Keep these actions short and safe without homing. The existing
-END sequence remains `PARK`, `M400`, optional `BED_MESH_CLEAR`, then the configured
-cleanup actions. Preserve `reset_limits` when replacing `endprint_actions` if you
-want its configured velocity, extrusion and speed resets.
+To run an END or CANCEL action before parking, place it before `park` in that
+macro's main action list. `CANCEL_PRINT` still skips the built-in `park` action
+when axes are not fully homed. Preserve `reset_limits` and `finalize` when
+replacing `endprint_actions`, and preserve `finalize` and `base_cancel` when
+replacing `cancelprint_actions`, unless you intentionally replace their behavior.

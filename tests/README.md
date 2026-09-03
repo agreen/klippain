@@ -11,5 +11,5 @@ bash tests/install_mcu_templates_test.sh
 
 The lifecycle tests render the actual macro templates with Klipper's Jinja
 delimiters and inspect emitted command order. They cover default behavior,
-custom hooks, parameter forwarding, missing actions and unhomed cancellation.
+custom ordered actions, parameter forwarding, missing actions and unhomed cancellation.
 They do not simulate firmware, probe readings, motors or physical clearance.

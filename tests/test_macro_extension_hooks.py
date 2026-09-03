@@ -77,13 +77,15 @@ class MacroExtensionHookTest(unittest.TestCase):
             "SET_PAUSE_NEXT_LAYER ENABLE=0", "SET_PAUSE_AT_LAYER ENABLE=0 LAYER=0",
         ])
 
-    def test_end_actions_run_in_order_before_park_and_forward_parameters(self) -> None:
-        commands = ("_END_PRINT_PRE_PARK_ACTION_FIRST", "_END_PRINT_PRE_PARK_ACTION_SECOND")
-        result = render("END_PRINT", variables={"endprint_pre_park_actions": ["first", "second", "first"]},
-                        commands=commands, rawparams="FILTER_TIME=20")
-        self.assertEqual(result[:4], [
-            commands[0] + " FILTER_TIME=20", commands[1] + " FILTER_TIME=20",
-            commands[0] + " FILTER_TIME=20", "PARK",
+    def test_end_actions_can_place_custom_behavior_before_park(self) -> None:
+        command = "_END_PRINT_ACTION_CLEAR_SKEW"
+        result = render("END_PRINT", variables={"endprint_actions": (
+            "clear_skew", "park", "wait_moves", "clear_bed_mesh", "reset_limits", "finalize",
+        )}, commands=(command,), rawparams="FILTER_TIME=20")
+        self.assertEqual(result, [
+            command + " FILTER_TIME=20", "PARK", "M400", "BED_MESH_CLEAR",
+            "_MODULE_RESET_LIMITS", "SET_PAUSE_NEXT_LAYER ENABLE=0",
+            "SET_PAUSE_AT_LAYER ENABLE=0 LAYER=0",
         ])
 
     def test_start_hook_precedes_core_setup_and_both_homing_paths(self) -> None:
@@ -97,13 +99,23 @@ class MacroExtensionHookTest(unittest.TestCase):
                 self.assertLess(result.index(command + " BED_TEMP=60"), result.index(home))
                 self.assertLess(result.index(home), result.index("_MODULE_PRIMELINE"))
 
-    def test_cancel_hook_runs_before_parking_and_also_when_unhomed(self) -> None:
-        command = "_CANCEL_PRINT_PRE_PARK_ACTION_PREPARE"
+    def test_default_cancel_sequence_is_unchanged(self) -> None:
+        self.assertEqual(render("CANCEL_PRINT"), [
+            "PARK", "SET_HEATER_TEMPERATURE HEATER=extruder TARGET=150.0", "M107",
+            "M400", "CLEAR_PAUSE", "BED_MESH_CLEAR", "SDCARD_RESET_FILE",
+            "SET_PAUSE_NEXT_LAYER ENABLE=0", "SET_PAUSE_AT_LAYER ENABLE=0 LAYER=0",
+            "BASE_CANCEL_PRINT",
+        ])
+
+    def test_cancel_actions_can_place_custom_behavior_before_conditional_park(self) -> None:
+        command = "_CANCEL_PRINT_ACTION_CLEAR_SKEW"
         for homed in ("xyz", "xy", ""):
             with self.subTest(homed=homed):
                 result = render("CANCEL_PRINT", homed=homed, commands=(command,),
                                 rawparams="FILTER_TIME=20",
-                                variables={"cancelprint_pre_park_actions": ["prepare"]})
+                                variables={"cancelprint_actions": (
+                                    "clear_skew", "park", "finalize", "base_cancel",
+                                )})
                 self.assertEqual(result[0], command + " FILTER_TIME=20")
                 self.assertEqual("PARK" in result, homed == "xyz")
                 self.assertEqual(result[-1], "BASE_CANCEL_PRINT")
@@ -111,23 +123,17 @@ class MacroExtensionHookTest(unittest.TestCase):
     def test_unknown_actions_fail_before_rendering_commands(self) -> None:
         for name, variable in (
             ("START_PRINT", "startprint_pre_actions"),
-            ("END_PRINT", "endprint_pre_park_actions"),
-            ("CANCEL_PRINT", "cancelprint_pre_park_actions"),
+            ("END_PRINT", "endprint_actions"),
+            ("CANCEL_PRINT", "cancelprint_actions"),
         ):
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "Unknown"):
                 render(name, variables={variable: ["missing"]})
 
-    def test_missing_or_empty_lists_preserve_default_output(self) -> None:
-        for name, variable in (
-            ("START_PRINT", "startprint_pre_actions"),
-            ("END_PRINT", "endprint_pre_park_actions"),
-            ("CANCEL_PRINT", "cancelprint_pre_park_actions"),
-        ):
-            with self.subTest(name=name):
-                default = render(name)
-                self.assertEqual(default, render(name, variables={variable: []}))
-                self.assertEqual(default, render(name, variables={variable: ()}))
-                self.assertEqual(default, render(name, variables={variable: jinja2.Undefined()}))
+    def test_missing_or_empty_start_pre_actions_preserve_default_output(self) -> None:
+        default = render("START_PRINT")
+        for value in ([], (), jinja2.Undefined()):
+            with self.subTest(value=value):
+                self.assertEqual(default, render("START_PRINT", variables={"startprint_pre_actions": value}))
 
 
 if __name__ == "__main__":

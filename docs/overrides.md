@@ -114,3 +114,43 @@ compatibility. If `variable_startprint_actions` contains `custom1`, Klippain cal
 so on. These slots only exist for `START_PRINT`. For new custom actions, prefer the
 named `_START_PRINT_ACTION_<NAME>` pattern because it is clearer and does not limit
 you to nine custom actions.
+
+### Actions before motion and parking
+
+The main `START_PRINT` action list begins after homing. For actions that must happen
+before homing or any other START_PRINT motion, set `variable_startprint_pre_actions`
+and define matching `_START_PRINT_PRE_ACTION_<NAME>` macros.
+
+`END_PRINT` and `CANCEL_PRINT` also provide action lists immediately before `PARK`:
+`variable_endprint_pre_park_actions` and `variable_cancelprint_pre_park_actions`.
+Their matching macro names are `_END_PRINT_PRE_PARK_ACTION_<NAME>` and
+`_CANCEL_PRINT_PRE_PARK_ACTION_<NAME>`. All three lists are empty by default, and
+the original macro parameters are forwarded to custom actions.
+
+For example, define an early setup action in `overrides.cfg`:
+```ini
+[gcode_macro _USER_VARIABLES]
+variable_startprint_pre_actions: ["prepare"]
+gcode:
+
+[gcode_macro _START_PRINT_PRE_ACTION_PREPARE]
+gcode:
+    # Your setup commands here; axes may not be homed yet.
+```
+
+Use a list (`["prepare"]`) or tuple (`"prepare",`) for a single action, and `()`
+to disable a hook list. Entries are custom action names, not the built-in actions
+from the main START/END lists. Actions execute in order and may be repeated.
+An unknown action raises an error before any commands in the parent macro run.
+
+Pre-start actions run after parameter/material validation and before setup,
+homing, or MMU initialization. Parameters saved on `START_PRINT` are available
+when the action macro executes. As with other Klipper macros, the parent template
+is evaluated before its commands run; actions cannot change already evaluated
+conditions in that parent invocation.
+
+Cancel pre-park actions also run when axes are unhomed; cancellation still skips
+`PARK` in that case. Keep these actions short and safe without homing. The existing
+END sequence remains `PARK`, `M400`, optional `BED_MESH_CLEAR`, then the configured
+cleanup actions. Preserve `reset_limits` when replacing `endprint_actions` if you
+want its configured velocity, extrusion and speed resets.

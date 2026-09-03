@@ -35,7 +35,7 @@ class PrinterOverlayTest(unittest.TestCase):
         self.assertNotIn("tilt_calib", actions)
         self.assertIn("qgl_fine", actions)
         self.assertIn("purge_blob", actions)
-        self.assertGreater(actions.index("load_skew"), actions.index("purge"))
+        self.assertGreater(actions.index("load_skew"), actions.index("purge_blob"))
         self.assertGreater(actions.index("load_skew"), actions.index("clean"))
         self.assertGreater(actions.index("load_skew"), actions.index("primeline"))
         self.assertIn("SKEW_PROFILE LOAD=calilantern_skew_profile", macro("_START_PRINT_ACTION_LOAD_SKEW"))

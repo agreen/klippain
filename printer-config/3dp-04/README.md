@@ -38,6 +38,27 @@ it preserves those existing definitions rather than replacing them.
 `lifecycle-hooks.cfg` is the exact small file intended for the live user-config
 directory; include it once at the end of `overrides.cfg`.
 
+`thermal-management.cfg` is the exact thermal policy intended to be installed as
+`~/printer_data/config/klippain-thermal-management.cfg`. Replace the existing
+`[include electronics_enclosure_fan.cfg]` line in `printer.cfg` with an include
+of that file; do not include both because they drive the same controller-fan pin.
+The old file should remain in the rollback backup.
+
+The smart soak uses the installed Voron Klipper Extensions `temp_tracker` over
+the prior ten minutes of chamber readings. PLA, PETG and TPU always wait only for
+bed temperature. ABS and ASA request an eight-minute soak unless the recent
+chamber average is within 5C of the slicer's requested `CHAMBER` target. With a
+50C target, an average of 45C or higher skips the timed soak. `SOAK=<minutes>`
+overrides the material duration, and `FORCE_SOAK=1` prevents a warm-printer skip.
+The tracker starts with no history after a Klipper restart, which safely produces
+a cold result until readings accumulate.
+
+The custom electronics-fan macro is replaced by Klipper's native
+`controller_fan`: active speed 0.8, then speed 0.3 for 300 seconds after the
+watched heaters and drivers become inactive. The RPi fan defaults to an idle
+target of 55C with 3C hysteresis and a 0.60 speed cap. START_PRINT lowers its
+target to 47C; END_PRINT and CANCEL_PRINT restore the 55C idle target.
+
 `QGL_FINE` calls the existing Klippain QGL wrapper twice. The coarse call uses
 `HORIZONTAL_MOVE_Z=30 SAMPLES=1 RETRIES=0`; the fine call changes only
 `HORIZONTAL_MOVE_Z=3`. Sampling, sample tolerance, sample retries, QGL tolerance

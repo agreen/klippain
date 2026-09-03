@@ -25,12 +25,12 @@ def macro(name: str) -> str:
 
 class PrinterOverlayTest(unittest.TestCase):
     def test_lifecycle_places_clear_skew_before_park(self) -> None:
-        self.assertEqual(["clear_skew"], value("startprint_pre_actions"))
+        self.assertEqual(("clear_skew", "set_active_thermals"), value("startprint_pre_actions"))
         for actions in (value("endprint_actions"), value("cancelprint_actions")):
             self.assertLess(actions.index("clear_skew"), actions.index("park"))
         for prefix in ("START_PRINT_PRE_ACTION", "END_PRINT_ACTION", "CANCEL_PRINT_ACTION"):
             self.assertIn("SET_SKEW CLEAR=1", macro(f"_{prefix}_CLEAR_SKEW"))
-        self.assertRegex(HOOKS, r'(?m)^variable_startprint_pre_actions: \["clear_skew"\]$')
+        self.assertRegex(HOOKS, r'(?m)^variable_startprint_pre_actions: "clear_skew", "set_active_thermals"$')
         for variable in ("endprint_actions", "cancelprint_actions"):
             match = re.search(rf"^variable_{variable}:\s*(.+)$", HOOKS, re.M)
             self.assertIsNotNone(match)
@@ -40,6 +40,8 @@ class PrinterOverlayTest(unittest.TestCase):
 
     def test_start_actions_use_two_pass_qgl_and_load_skew_last(self) -> None:
         actions = value("startprint_actions")
+        self.assertNotIn("bed_soak", actions)
+        self.assertEqual("smart_bed_soak", actions[0])
         self.assertNotIn("tilt_calib", actions)
         self.assertIn("qgl_fine", actions)
         self.assertIn("purge_blob", actions)

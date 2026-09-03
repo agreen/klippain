@@ -13,3 +13,7 @@ The lifecycle tests render the actual macro templates with Klipper's Jinja
 delimiters and inspect emitted command order. They cover default behavior,
 custom ordered actions, parameter forwarding, missing actions and unhomed cancellation.
 They do not simulate firmware, probe readings, motors or physical clearance.
+
+The 3dp-04 thermal tests render the smart-soak action for cold and warm material
+scenarios, explicit overrides, and requested chamber targets. They also verify
+the native controller-fan cooldown and RPi idle/active policy configuration.

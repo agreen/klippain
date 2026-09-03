@@ -9,6 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OVERLAY = (REPO_ROOT / "printer-config" / "3dp-04" / "klippain-overrides.cfg").read_text(encoding="utf-8")
 HOOKS = (REPO_ROOT / "printer-config" / "3dp-04" / "lifecycle-hooks.cfg").read_text(encoding="utf-8")
+UPDATER = (REPO_ROOT / "printer-config" / "3dp-04" / "moonraker-overrides.conf").read_text(encoding="utf-8")
 
 
 def value(name: str):
@@ -56,6 +57,13 @@ class PrinterOverlayTest(unittest.TestCase):
         self.assertIn("reset_limits", value("endprint_actions"))
         self.assertEqual(50, value("park_lift_z"))
         self.assertEqual((150, 10), value("park_position_xy"))
+
+    def test_updater_targets_stable_without_changing_live_path(self) -> None:
+        self.assertIn("path: ~/klippain_config", UPDATER)
+        self.assertIn("origin: https://github.com/agreen/klippain.git", UPDATER)
+        self.assertIn("primary_branch: codex/3dp-04-stable", UPDATER)
+        self.assertIn("managed_services: moonraker klipper", UPDATER)
+        self.assertIn("install_script: install.sh", UPDATER)
 
 
 if __name__ == "__main__":

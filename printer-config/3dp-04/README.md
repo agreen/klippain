@@ -1,7 +1,7 @@
 # 3dp-04 overlay and update handoff
 
 This directory exists only on the personal `codex/3dp-04` branch. The generic
-`codex/pre-motion-hooks` branch contains no printer-specific values. Nothing here
+`codex/configurable-print-actions` branch contains no printer-specific values. Nothing here
 is installed automatically by Klippain's installer or workflow.
 
 ## Repository inspection
@@ -13,16 +13,17 @@ The only workflow is a commented-out stale-issue workflow. Existing validation i
 `tests/install_mcu_templates_test.sh`. The added workflow runs those same entry
 points. The new lifecycle tests use Jinja2 to render the actual macros.
 
-`START_PRINT` homes before its existing action list. `END_PRINT` parks and clears
-the mesh before its cleanup list. `CANCEL_PRINT` conditionally parks before its
-fixed cleanup. The new, empty-by-default hooks run earlier without changing these
-defaults. `reset_limits` remains in the default END list. `PARK` already supports
+`START_PRINT` homes before its existing action list, so it has an empty-by-default
+pre-start action list. `END_PRINT` and `CANCEL_PRINT` now expose their complete
+ordered sequences as action lists; their defaults preserve the prior command
+order. `reset_limits` remains in the default END list. `PARK` already supports
 a configurable lift and clamps it to the remaining Z travel; it is unchanged.
 
 ## Proposed user configuration
 
 `klippain-overrides.cfg` is an overlay for a Voron 2.4 300mm with Tap. It clears
-skew before START core setup/homing and before END/CANCEL parking, then loads
+skew before START core setup/homing and places `clear_skew` before `park` in the
+ordered END/CANCEL action lists, then loads
 `calilantern_skew_profile` after purge, cleaning and primeline. Its START list is
 based on the current upstream Tap profile; merge any existing custom actions
 from the live printer before installing it. Keep the existing `[skew_correction]`
@@ -32,7 +33,7 @@ Live inspection on 2026-09-03 confirmed that 3dp-04 already uses the listed
 `purge_blob`, `qgl_fine` and `load_skew` actions, includes `reset_limits`, and has
 the requested parking values. Its existing `qgl_fine.cfg` already has the same
 coarse pass followed by a deferred, state-checked fine pass. The deployment diff
-therefore adds the three early hook variables/macros and the updater override;
+therefore adds the pre-start action, ordered END/CANCEL actions and updater override;
 it preserves those existing definitions rather than replacing them.
 `lifecycle-hooks.cfg` is the exact small file intended for the live user-config
 directory; include it once at the end of `overrides.cfg`.
@@ -55,7 +56,7 @@ Parking uses a 50mm lift and XY 150,10.
 
 - Keep fork `main` as an unmodified upstream mirror. It was 95 commits behind,
   with no unique commits, at inspection time.
-- Keep the generic hook commit on `codex/pre-motion-hooks`, suitable for upstream
+- Keep the generic lifecycle commit on `codex/configurable-print-actions`, suitable for upstream
   review. The fork-only workflow lives on `codex/validated-hooks`. Rebase
   unpublished review work onto new upstream revisions;
   avoid rewriting any branch used by a printer.

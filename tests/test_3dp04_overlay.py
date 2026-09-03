@@ -24,16 +24,18 @@ def macro(name: str) -> str:
 
 
 class PrinterOverlayTest(unittest.TestCase):
-    def test_lifecycle_uses_clear_skew_hooks(self) -> None:
+    def test_lifecycle_places_clear_skew_before_park(self) -> None:
         self.assertEqual(["clear_skew"], value("startprint_pre_actions"))
-        self.assertEqual(["clear_skew"], value("endprint_pre_park_actions"))
-        self.assertEqual(["clear_skew"], value("cancelprint_pre_park_actions"))
-        for prefix in ("START_PRINT_PRE_ACTION", "END_PRINT_PRE_PARK_ACTION",
-                       "CANCEL_PRINT_PRE_PARK_ACTION"):
+        for actions in (value("endprint_actions"), value("cancelprint_actions")):
+            self.assertLess(actions.index("clear_skew"), actions.index("park"))
+        for prefix in ("START_PRINT_PRE_ACTION", "END_PRINT_ACTION", "CANCEL_PRINT_ACTION"):
             self.assertIn("SET_SKEW CLEAR=1", macro(f"_{prefix}_CLEAR_SKEW"))
-        for variable in ("startprint_pre_actions", "endprint_pre_park_actions",
-                         "cancelprint_pre_park_actions"):
-            self.assertRegex(HOOKS, rf"(?m)^variable_{variable}: \[\"clear_skew\"\]$")
+        self.assertRegex(HOOKS, r'(?m)^variable_startprint_pre_actions: \["clear_skew"\]$')
+        for variable in ("endprint_actions", "cancelprint_actions"):
+            match = re.search(rf"^variable_{variable}:\s*(.+)$", HOOKS, re.M)
+            self.assertIsNotNone(match)
+            actions = ast.literal_eval(match.group(1))
+            self.assertLess(actions.index("clear_skew"), actions.index("park"))
         self.assertEqual(3, HOOKS.count("SET_SKEW CLEAR=1"))
 
     def test_start_actions_use_two_pass_qgl_and_load_skew_last(self) -> None:

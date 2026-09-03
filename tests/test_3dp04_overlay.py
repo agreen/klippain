@@ -8,6 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OVERLAY = (REPO_ROOT / "printer-config" / "3dp-04" / "klippain-overrides.cfg").read_text(encoding="utf-8")
+HOOKS = (REPO_ROOT / "printer-config" / "3dp-04" / "lifecycle-hooks.cfg").read_text(encoding="utf-8")
 
 
 def value(name: str):
@@ -29,6 +30,10 @@ class PrinterOverlayTest(unittest.TestCase):
         for prefix in ("START_PRINT_PRE_ACTION", "END_PRINT_PRE_PARK_ACTION",
                        "CANCEL_PRINT_PRE_PARK_ACTION"):
             self.assertIn("SET_SKEW CLEAR=1", macro(f"_{prefix}_CLEAR_SKEW"))
+        for variable in ("startprint_pre_actions", "endprint_pre_park_actions",
+                         "cancelprint_pre_park_actions"):
+            self.assertRegex(HOOKS, rf"(?m)^variable_{variable}: \[\"clear_skew\"\]$")
+        self.assertEqual(3, HOOKS.count("SET_SKEW CLEAR=1"))
 
     def test_start_actions_use_two_pass_qgl_and_load_skew_last(self) -> None:
         actions = value("startprint_actions")

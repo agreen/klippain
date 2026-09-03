@@ -34,6 +34,8 @@ the requested parking values. Its existing `qgl_fine.cfg` already has the same
 coarse pass followed by a deferred, state-checked fine pass. The deployment diff
 therefore adds the three early hook variables/macros and the updater override;
 it preserves those existing definitions rather than replacing them.
+`lifecycle-hooks.cfg` is the exact small file intended for the live user-config
+directory; include it once at the end of `overrides.cfg`.
 
 `QGL_FINE` calls the existing Klippain QGL wrapper twice. The coarse call uses
 `HORIZONTAL_MOVE_Z=30 SAMPLES=1 RETRIES=0`; the fine call changes only
